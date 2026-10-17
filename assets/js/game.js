@@ -160,9 +160,10 @@
       await detainAtCustoms(name);
     } else {
       const joker = tile.type === 'chance' ? await openBoxes(name) : null;
-      if (joker && joker.type === 'advance') {
-        log(`${name} soruyu cevaplamadan 2 kare ilerleme hakkı kazandı.`, 'ok');
-        await advanceSteps(2);
+      const skip = joker && (joker.type === 'step' || joker.type === 'advance') ? (joker.type === 'advance' ? 2 : 1) : 0;
+      if (skip) {
+        log(`${name} soruyu cevaplamadan ${skip} kutu atladı.`, 'ok');
+        await advanceSteps(skip);
       } else {
         const correct = await askQuestion(name, tile, joker);
         if (correct) {
@@ -453,6 +454,7 @@
         const jt = LP.BOX_TYPES[joker.type];
         let extra = '';
         if (joker.type === 'fifty') dropWrongOptions(opts, 2);
+        if (joker.type === 'retry') extra = '<div class="joker-extra">İki yanlış cevap hakkın var.</div>';
         if (joker.type === 'hint') {
           if (q.hint && q.hint.trim()) {
             extra = `<div class="joker-extra"><b>İpucu:</b> ${esc(q.hint)}</div>`;
@@ -490,10 +492,22 @@
 
       const buttons = [...document.querySelectorAll('.q-option')];
       let done = false;
+      let misses = joker && joker.type === 'retry' ? 2 : 0;
 
       const finish = (chosen) => {
         if (done) return;
         const correct = opts[chosen].ok;
+        if (!correct && misses > 0) {
+          misses--;
+          LP.Sound.wrong();
+          buttons[chosen].disabled = true;
+          buttons[chosen].classList.add('wrong');
+          $('#qResult').innerHTML = `
+            <div class="q-result bad">
+              <div class="qr-line">${icon('x')}${misses ? 'Yanlış. Bir hakkın daha var.' : 'Yanlış. Son şansın.'}</div>
+            </div>`;
+          return;
+        }
         done = true;
         if (correct) LP.Sound.correct();
         else LP.Sound.wrong();
@@ -518,37 +532,32 @@
     });
   }
 
-  function isLastChanceTile() {
+  function isBoostChance() {
+    const pos = gridPos(game.pos);
+    const rightCorner = pos.row === 1 && pos.col === 7;
     let last = -1;
     tiles.forEach((t, i) => { if (t.type === 'chance') last = i; });
-    return game.pos === last;
+    return rightCorner || game.pos === last;
   }
 
   function openBoxes(name) {
     return new Promise((resolve) => {
-      if (!data.boxes.length) {
+      const count = Math.max(2, Math.min(6, Number(settings.boxCount) || 3));
+      const regular = data.boxes.filter((b) => ['help', 'fifty', 'hint'].includes(b.type));
+      const pool = shuffle([...(regular.length ? regular : data.boxes)]);
+      const boxes = isBoostChance()
+        ? shuffle(LP.BOOST_BOXES.map((b) => ({ ...b })))
+        : Array.from({ length: count }, (_, i) => pool[i % pool.length]);
+      if (!boxes.length) {
         resolve(null);
         return;
-      }
-      const count = Math.max(2, Math.min(6, Number(settings.boxCount) || 3));
-      const regular = data.boxes.filter((b) => b.type !== 'advance');
-      const pool = shuffle([...(regular.length ? regular : data.boxes)]);
-      let boxes;
-      if (isLastChanceTile()) {
-        const advanceCount = Math.max(1, count - 1);
-        boxes = shuffle([
-          ...Array.from({ length: advanceCount }, () => ({ ...LP.ADVANCE_BOX })),
-          ...Array.from({ length: count - advanceCount }, (_, i) => pool[i % pool.length]),
-        ]);
-      } else {
-        boxes = Array.from({ length: count }, (_, i) => pool[i % pool.length]);
       }
 
       openModal(`
         <div class="info-card chance-card">
           <div class="info-icon tone-chance">${icon('sparkles')}</div>
           <h2>Şanslı Soru</h2>
-          <p>${esc(name)}, bir kutu seç. İçinden çıkan joker bu soruda senin olacak.</p>
+          <p>${esc(name)}, bir kutu seç.</p>
           <div class="boxes">
             ${boxes.map((b, i) => {
               const t = LP.BOX_TYPES[b.type];
@@ -558,8 +567,8 @@
               </button>`;
             }).join('')}
           </div>
-          <div id="boxResult"></div>
-          <button class="btn primary hidden" id="boxGo">Soruya Geç${icon('arrowRight')}</button>
+          <p class="box-note" id="boxNote"></p>
+          <button class="btn primary hidden" id="boxGo">Devam${icon('arrowRight')}</button>
         </div>`);
 
       const els = [...document.querySelectorAll('.lucky-box')];
@@ -569,11 +578,9 @@
         LP.Sound.boxOpen();
         const b = boxes[i];
         const t = LP.BOX_TYPES[b.type];
-        if (b.type === 'advance') LP.Sound.correct();
-        $('#boxResult').innerHTML = `<div class="info-sub">${icon(LP.BOX_ICONS[b.type])}${esc(b.text)}</div>`;
+        $('#boxNote').textContent = b.text;
         log(`${name} şans kutusundan "${t.label}" jokeri çıkardı.`, 'chance');
         const go = $('#boxGo');
-        if (b.type === 'advance') go.innerHTML = `2 Kare İlerle${icon('arrowRight')}`;
         go.classList.remove('hidden');
         go.focus();
         go.onclick = () => { closeModal(); resolve(b); };
@@ -700,7 +707,7 @@
     showInfo({
       icon: 'info',
       title: 'Nasıl Oynanır?',
-      text: '"Kişi Seç" ile sınıftan rastgele biri seçilir. İsim çıkınca kişi sınıftaysa soruya geçilir, sınıfta yoksa yeniden kişi seçilir. Sınıfta olan kişi tırın bulunduğu karenin sorusunu cevaplar. Doğru cevapta tır bir kare ilerler, yanlış cevapta olduğu yerde bekler. Şanslı Soru karelerinde önce bir kutu açılır; içinden yardım alma, iki yanlış şıkkın elenmesi ya da ipucu gibi bir joker çıkar; jokere rağmen yanlış cevapta tır yerinde kalır. Son şans karesinde kutuların çoğu, soruyu cevaplamadan 2 kare ilerletir. Tır "Gümrüğe Takıldın" karesindeyken seçilen kişi gümrükte kalır, tır yoluna devam eder. Ceza karesine gelen tır bir kare geri gider. Varıştan önce gümrükte kalan arkadaşlar, tahta sorularından ayrı olan Koçtaş vaka analizi sınıfça çözülmeden kurtarılamaz ve oyun bitmez!',
+      text: '"Kişi Seç" ile sınıftan rastgele biri seçilir. İsim çıkınca kişi sınıftaysa soruya geçilir, sınıfta yoksa yeniden kişi seçilir. Sınıfta olan kişi tırın bulunduğu karenin sorusunu cevaplar. Doğru cevapta tır bir kare ilerler, yanlış cevapta olduğu yerde bekler. Şanslı Soru karelerinde önce bir kutu açılır. Sağ üst köşe ve son şans karesinde dört kutu vardır: iki yanlış şık silinir, iki kez yanlış cevap hakkı, 1 kutu atlama ya da 2 kutu atlama. Atlama çıkan kişi soruyu cevaplamadan ilerler. Tır "Gümrüğe Takıldın" karesindeyken seçilen kişi gümrükte kalır, tır yoluna devam eder. Ceza karesine gelen tır bir kare geri gider. Varıştan önce gümrükte kalan arkadaşlar, tahta sorularından ayrı olan Koçtaş vaka analizi sınıfça çözülmeden kurtarılamaz ve oyun bitmez!',
     });
   }
 

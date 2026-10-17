@@ -135,17 +135,20 @@ LP.DEFAULT_CASES = [
 
 LP.BOX_TYPES = {
   help: { label: 'Yardım Al', icon: '🤝' },
-  fifty: { label: '2 Yanlış Şık Elenir', icon: '✂️' },
+  fifty: { label: '2 Yanlış Şık', icon: '✂️' },
   hint: { label: 'İpuçlu Soru', icon: '💡' },
-  advance: { label: '2 Kare İlerle', icon: '🚚' },
+  retry: { label: '2 Yanlış Hakkı', icon: '🔁' },
+  step: { label: '1 Kutu Atla', icon: '➡️' },
+  advance: { label: '2 Kutu Atla', icon: '🚚' },
 };
 
-// Yalnızca son şans karesinde açılır. İlk şans karelerinin kutusuna konmaz.
-LP.ADVANCE_BOX = {
-  id: 'b-advance',
-  type: 'advance',
-  text: 'Soruyu cevaplamadan 2 kare ilerleme hakkı kazandın, tebrikler!',
-};
+// Sağ üst köşe ve son şans karesinde bu dört kutu açılır.
+LP.BOOST_BOXES = [
+  { id: 'b-fifty', type: 'fifty', text: 'Tebrikler, iki yanlış şık silindi.' },
+  { id: 'b-retry', type: 'retry', text: 'Tebrikler, iki kez yanlış cevap verebilirsin.' },
+  { id: 'b-step', type: 'step', text: 'Tebrikler, soruyu cevaplamana gerek yok. 1 kutu atlama hakkı kazandın.' },
+  { id: 'b-advance', type: 'advance', text: 'Tebrikler, soruyu cevaplamana gerek yok. 2 kutu atlama hakkı kazandın.' },
+];
 
 LP.DEFAULT_BOXES = [
   { id: 'b1', type: 'help', text: 'Sınıftan istediğin bir arkadaşından yardım alabilirsin!' },
