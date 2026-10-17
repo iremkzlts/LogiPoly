@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>LogiPoly - Yönetici Paneli</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Josefin+Sans:wght@300;400;600;700&display=swap">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="admin-page">
+  <header class="topbar">
+    <div class="brand">Logi<span>Poly</span><small>Yönetici Paneli</small></div>
+    <nav>
+      <a class="btn ghost sm" href="index.html?test=1" target="_blank" title="Gerçek oyunu etkilemeden istediğiniz kareyi deneyin">🧪 Test Modu</a>
+      <a class="btn ghost sm" href="index.html">Oyuna Dön</a>
+      <button class="btn ghost sm hidden" id="btnLogout">Çıkış</button>
+    </nav>
+  </header>
+
+  <section id="loginView" class="panel login-card">
+    <h2>Yönetici Girişi</h2>
+    <p class="muted">Soruları, kişileri ve oyun ayarlarını düzenlemek için giriş yapın.</p>
+    <form id="loginForm">
+      <input type="password" id="loginPass" placeholder="Şifre" autocomplete="current-password">
+      <button class="btn primary" type="submit">Giriş</button>
+    </form>
+    <p id="loginError" class="error hidden">Şifre hatalı.</p>
+    <p class="hint">Varsayılan şifre: <code>logipoly</code> — Ayarlar sekmesinden değiştirebilirsiniz.</p>
+  </section>
+
+  <main id="adminView" class="admin-wrap hidden">
+    <div class="tabs">
+      <button class="tab active" data-tab="questions">❓ Sorular</button>
+      <button class="tab" data-tab="cases">🚨 Kurtarma Soruları</button>
+      <button class="tab" data-tab="people">👥 Kişiler</button>
+      <button class="tab" data-tab="tiles">🧱 Kareler</button>
+      <button class="tab" data-tab="boxes">🍀 Şanslı Soru Jokerleri</button>
+      <button class="tab" data-tab="settings">⚙️ Ayarlar</button>
+      <button class="tab" data-tab="backup">💾 Yedekleme</button>
+    </div>
+
+    <section class="tab-panel" id="tab-questions">
+      <div class="toolbar">
+        <select id="qFilter"><option value="">Tüm kategoriler</option></select>
+        <input type="search" id="qSearch" placeholder="Soru ara...">
+        <span class="spacer"></span>
+        <button class="btn danger" id="btnClearQ">🗑️ Tüm Soruları Sil</button>
+        <button class="btn primary" id="btnAddQ">+ Yeni Soru</button>
+      </div>
+      <div class="stats" id="qStats"></div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>#</th><th>Kategori</th><th>Soru</th><th>Doğru Cevap</th><th>İpucu</th><th></th></tr></thead>
+          <tbody id="qBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="tab-panel hidden" id="tab-cases">
+      <div class="toolbar">
+        <p class="muted">Bu liste tahta sorularından ayrıdır. Gümrükte kalan biri varsa oyun bitmeden önce buradaki vaka analizi sorulur. Varsayılan soru Koçtaş örneğidir ve doğru cevaplanmadan oyun bitmez. Şık girmezseniz soru açık uçlu olur ve cevabı öğretmen değerlendirir.</p>
+        <span class="spacer"></span>
+        <button class="btn primary" id="btnAddCase">+ Yeni Kurtarma Sorusu</button>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>#</th><th>Başlık</th><th>Vaka</th><th>Tür</th><th></th></tr></thead>
+          <tbody id="caseBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="tab-panel hidden" id="tab-people">
+      <div class="people-grid">
+        <div class="panel">
+          <h3>👥 Kişi Listesi</h3>
+          <div class="stats" id="peopleStats"></div>
+          <label class="form-grid">
+            <span class="muted">Her satıra bir isim yazın. Excel'den sütun kopyalayıp yapıştırabilirsiniz. Aynı isim iki kez eklenmez.</span>
+            <textarea id="peopleText" rows="18" placeholder="Ayşe Yılmaz&#10;Mehmet Kaya&#10;..."></textarea>
+          </label>
+          <div class="actions-bar">
+            <button class="btn primary" id="btnSavePeople">💾 Kişileri Kaydet</button>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>🎯 Oyun Durumu</h3>
+          <p class="muted" style="margin-bottom:12px">Seçilen kişi, herkes bir kez seçilene kadar tekrar seçilmez. 🛃 işaretli kişiler gümrükte bekliyor.</p>
+          <div id="drawnList" class="chip-list"></div>
+          <div class="actions-bar">
+            <button class="btn danger" id="btnResetDraw">🔄 Oyunu Sıfırla</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel hidden" id="tab-tiles">
+      <p class="muted" style="margin-bottom:14px">
+        Tahtada 24 kare vardır. Tır, bulunduğu karenin sorusu doğru cevaplanınca bir sonraki kareye geçer.
+        <b>Gümrüğe Takıldın</b>: tır bu karedeyken seçilen kişi soru cevaplamadan gümrükte kalır, tır yoluna devam eder (tek gümrük karesi önerilir).
+        <b>Ceza</b>: tır bu kareye gelince bir kare geri gider; her ceza karesi oyun başına bir kez uygulanır.
+        <b>Şanslı Soru</b>: soru öncesinde joker kutularından biri açılır.
+      </p>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>#</th><th>Tür</th><th>Kare Adı</th><th>Soru Kategorisi</th></tr></thead>
+          <tbody id="tBody"></tbody>
+        </table>
+      </div>
+      <div class="actions-bar"><button class="btn primary" id="btnSaveTiles">💾 Kareleri Kaydet</button></div>
+    </section>
+
+    <section class="tab-panel hidden" id="tab-boxes">
+      <div class="toolbar">
+        <p class="muted">Tır bir Şanslı Soru karesindeyken seçilen kişi kapalı kutulardan birini açar. İçinden çıkan joker o soruda kullanılır.</p>
+        <span class="spacer"></span>
+        <button class="btn" id="btnAddBox">+ Kutu Ekle</button>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>#</th><th>Joker</th><th>Kutudan çıkınca gösterilecek mesaj</th><th></th></tr></thead>
+          <tbody id="boxBody"></tbody>
+        </table>
+      </div>
+      <div class="panel" style="margin-top:14px">
+        <h3>Joker türleri</h3>
+        <p class="muted">🤝 <b>Yardım Al</b>: Kişi istediği bir arkadaşından yardım alır. ✂️ <b>2 Yanlış Şık Elenir</b>: İki yanlış şık kaldırılır. 💡 <b>İpuçlu Soru</b>: Soru, ipucuyla birlikte gelir. Jokere rağmen cevap yanlışsa ikinci hak yoktur; tır olduğu karede kalır.</p>
+      </div>
+      <div class="actions-bar"><button class="btn primary" id="btnSaveBoxes">💾 Kutuları Kaydet</button></div>
+    </section>
+
+    <section class="tab-panel hidden" id="tab-settings">
+      <form id="settingsForm" class="panel">
+        <div class="form-grid two">
+          <label>Piyon
+            <select name="pawn" id="pawnSelect"></select>
+          </label>
+          <label>Şanslı soru karesinde gösterilecek kutu sayısı
+            <input type="number" name="boxCount" min="2" max="6">
+          </label>
+          <label>Yönetici şifresi
+            <input type="text" name="adminPassword" autocomplete="off">
+            <small>Boş bırakılırsa panel şifresiz açılır.</small>
+          </label>
+        </div>
+        <div class="actions-bar"><button class="btn primary" type="submit">💾 Ayarları Kaydet</button></div>
+      </form>
+    </section>
+
+    <section class="tab-panel hidden" id="tab-backup">
+      <div class="backup-grid">
+        <div class="panel">
+          <h3>⬇️ Dışa Aktar</h3>
+          <p>Tüm soruları, vakaları, kişileri, kareleri, kutuları ve ayarları JSON dosyası olarak indir.</p>
+          <button class="btn primary" id="btnExport">JSON İndir</button>
+        </div>
+        <div class="panel">
+          <h3>⬆️ İçe Aktar</h3>
+          <p>Daha önce indirdiğin bir LogiPoly JSON dosyasını yükle. Mevcut verilerin üzerine yazılır.</p>
+          <input type="file" id="importFile" accept="application/json,.json">
+        </div>
+        <div class="panel">
+          <h3>♻️ Varsayılana Dön</h3>
+          <p>Tüm değişiklikleri silip LogiPoly'nin hazır soru ve ayarlarına geri döner.</p>
+          <button class="btn danger" id="btnReset">Sıfırla</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-card dark" id="modalCard"></div>
+  </div>
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script src="assets/js/admin.js"></script>
+</body>
+</html>
