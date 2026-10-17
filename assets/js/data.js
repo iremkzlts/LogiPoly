@@ -134,7 +134,7 @@ LP.DEFAULT_CASES = [
 ];
 
 LP.BOX_TYPES = {
-  help: { label: 'Yardım Al', icon: '🤝' },
+  help: { label: 'Birine Danış', icon: '🤝' },
   fifty: { label: '2 Yanlış Şık', icon: '✂️' },
   hint: { label: 'İpuçlu Soru', icon: '💡' },
   retry: { label: '2 Yanlış Hakkı', icon: '🔁' },
@@ -142,7 +142,14 @@ LP.BOX_TYPES = {
   advance: { label: '2 Kutu Atla', icon: '🚚' },
 };
 
-// Sağ üst köşe ve son şans karesinde bu dört kutu açılır.
+// Soldaki ve sondaki şans karelerinde bu üç kutu açılır.
+LP.CLASSIC_BOXES = [
+  { id: 'b-fifty', type: 'fifty', text: 'Tebrikler, iki yanlış şık silindi.' },
+  { id: 'b-retry', type: 'retry', text: 'Tebrikler, iki kez yanlış cevap verebilirsin.' },
+  { id: 'b-help', type: 'help', text: 'Tebrikler, birine danışabilirsin.' },
+];
+
+// Atlama yalnız sağ üst köşedeki şans karesinde çıkar.
 LP.BOOST_BOXES = [
   { id: 'b-fifty', type: 'fifty', text: 'Tebrikler, iki yanlış şık silindi.' },
   { id: 'b-retry', type: 'retry', text: 'Tebrikler, iki kez yanlış cevap verebilirsin.' },

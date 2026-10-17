@@ -534,20 +534,13 @@
 
   function isBoostChance() {
     const pos = gridPos(game.pos);
-    const rightCorner = pos.row === 1 && pos.col === 7;
-    let last = -1;
-    tiles.forEach((t, i) => { if (t.type === 'chance') last = i; });
-    return rightCorner || game.pos === last;
+    return pos.row === 1 && pos.col === 7;
   }
 
   function openBoxes(name) {
     return new Promise((resolve) => {
-      const count = Math.max(2, Math.min(6, Number(settings.boxCount) || 3));
-      const regular = data.boxes.filter((b) => ['help', 'fifty', 'hint'].includes(b.type));
-      const pool = shuffle([...(regular.length ? regular : data.boxes)]);
-      const boxes = isBoostChance()
-        ? shuffle(LP.BOOST_BOXES.map((b) => ({ ...b })))
-        : Array.from({ length: count }, (_, i) => pool[i % pool.length]);
+      const source = isBoostChance() ? LP.BOOST_BOXES : LP.CLASSIC_BOXES;
+      const boxes = shuffle(source.map((b) => ({ ...b })));
       if (!boxes.length) {
         resolve(null);
         return;
@@ -707,7 +700,7 @@
     showInfo({
       icon: 'info',
       title: 'Nasıl Oynanır?',
-      text: '"Kişi Seç" ile sınıftan rastgele biri seçilir. İsim çıkınca kişi sınıftaysa soruya geçilir, sınıfta yoksa yeniden kişi seçilir. Sınıfta olan kişi tırın bulunduğu karenin sorusunu cevaplar. Doğru cevapta tır bir kare ilerler, yanlış cevapta olduğu yerde bekler. Şanslı Soru karelerinde önce bir kutu açılır. Sağ üst köşe ve son şans karesinde dört kutu vardır: iki yanlış şık silinir, iki kez yanlış cevap hakkı, 1 kutu atlama ya da 2 kutu atlama. Atlama çıkan kişi soruyu cevaplamadan ilerler. Tır "Gümrüğe Takıldın" karesindeyken seçilen kişi gümrükte kalır, tır yoluna devam eder. Ceza karesine gelen tır bir kare geri gider. Varıştan önce gümrükte kalan arkadaşlar, tahta sorularından ayrı olan Koçtaş vaka analizi sınıfça çözülmeden kurtarılamaz ve oyun bitmez!',
+      text: '"Kişi Seç" ile sınıftan rastgele biri seçilir. İsim çıkınca kişi sınıftaysa soruya geçilir, sınıfta yoksa yeniden kişi seçilir. Sınıfta olan kişi tırın bulunduğu karenin sorusunu cevaplar. Doğru cevapta tır bir kare ilerler, yanlış cevapta olduğu yerde bekler. Şanslı Soru karelerinde önce bir kutu açılır. Çoğunda iki yanlış şık silinir, iki kez yanlış cevap hakkı ya da birine danışma çıkar. Atlama yalnız sağ üst köşededir; orada 1 ya da 2 kutu atlanır ve soru sorulmaz. Tır "Gümrüğe Takıldın" karesindeyken seçilen kişi gümrükte kalır, tır yoluna devam eder. Ceza karesine gelen tır bir kare geri gider. Varıştan önce gümrükte kalan arkadaşlar, tahta sorularından ayrı olan Koçtaş vaka analizi sınıfça çözülmeden kurtarılamaz ve oyun bitmez!',
     });
   }
 
