@@ -49,4 +49,4 @@ LP.icon = function (name, cls) {
 
 LP.CATEGORY_ICONS = { plan: 'info', model: 'sliders', operasyon: 'warehouse', uretim: 'repeat' };
 LP.PAWN_ICONS = { tir: 'truck', koli: 'package', gemi: 'ship', ucak: 'plane', tren: 'train', vinc: 'container' };
-LP.BOX_ICONS = { help: 'handshake', fifty: 'scissors', hint: 'bulb' };
+LP.BOX_ICONS = { help: 'handshake', fifty: 'scissors', hint: 'bulb', advance: 'truck' };

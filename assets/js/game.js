@@ -160,15 +160,20 @@
       await detainAtCustoms(name);
     } else {
       const joker = tile.type === 'chance' ? await openBoxes(name) : null;
-      const correct = await askQuestion(name, tile, joker);
-      if (correct) {
-        game.stats.correct++;
-        log(`${name} doğru cevapladı, tır bir kare ilerliyor.`, 'ok');
-        await advance();
+      if (joker && joker.type === 'advance') {
+        log(`${name} soruyu cevaplamadan 2 kare ilerleme hakkı kazandı.`, 'ok');
+        await advanceSteps(2);
       } else {
-        game.stats.wrong++;
-        log(`${name} yanlış cevapladı, tır bu karede bekliyor.`, 'bad');
-        shakePawn();
+        const correct = await askQuestion(name, tile, joker);
+        if (correct) {
+          game.stats.correct++;
+          log(`${name} doğru cevapladı, tır bir kare ilerliyor.`, 'ok');
+          await advance();
+        } else {
+          game.stats.wrong++;
+          log(`${name} yanlış cevapladı, tır bu karede bekliyor.`, 'bad');
+          shakePawn();
+        }
       }
     }
 
@@ -179,12 +184,28 @@
 
   // Tır bir kare ilerler; varıştan önce gümrükte biri varsa alarm verilir.
   async function advance() {
-    if (game.pos + 1 >= LAST && game.detained.length) {
-      await startRescue();
-      return;
+    await advanceSteps(1);
+  }
+
+  // Birkaç kare ilerler. Gümrük, ceza, yeni bir şans karesi ya da varışta durur.
+  async function advanceSteps(steps) {
+    for (let i = 0; i < steps; i++) {
+      if (game.finished || game.rescueMode) return;
+      if (game.pos + 1 >= LAST && game.detained.length) {
+        await startRescue();
+        return;
+      }
+      await moveForward();
+      if (game.pos === LAST) {
+        finishGame();
+        return;
+      }
+      const tile = tiles[game.pos];
+      if (tile.type === 'customs' || tile.type === 'chance' || tile.type === 'penalty') {
+        await resolveLanding();
+        return;
+      }
     }
-    await moveForward();
-    await resolveLanding();
   }
 
   async function resolveLanding() {
@@ -497,6 +518,12 @@
     });
   }
 
+  function isLastChanceTile() {
+    let last = -1;
+    tiles.forEach((t, i) => { if (t.type === 'chance') last = i; });
+    return game.pos === last;
+  }
+
   function openBoxes(name) {
     return new Promise((resolve) => {
       if (!data.boxes.length) {
@@ -504,8 +531,18 @@
         return;
       }
       const count = Math.max(2, Math.min(6, Number(settings.boxCount) || 3));
-      const pool = shuffle([...data.boxes]);
-      const boxes = Array.from({ length: count }, (_, i) => pool[i % pool.length]);
+      const regular = data.boxes.filter((b) => b.type !== 'advance');
+      const pool = shuffle([...(regular.length ? regular : data.boxes)]);
+      let boxes;
+      if (isLastChanceTile()) {
+        const advanceCount = Math.max(1, count - 1);
+        boxes = shuffle([
+          ...Array.from({ length: advanceCount }, () => ({ ...LP.ADVANCE_BOX })),
+          ...Array.from({ length: count - advanceCount }, (_, i) => pool[i % pool.length]),
+        ]);
+      } else {
+        boxes = Array.from({ length: count }, (_, i) => pool[i % pool.length]);
+      }
 
       openModal(`
         <div class="info-card chance-card">
@@ -532,9 +569,11 @@
         LP.Sound.boxOpen();
         const b = boxes[i];
         const t = LP.BOX_TYPES[b.type];
+        if (b.type === 'advance') LP.Sound.correct();
         $('#boxResult').innerHTML = `<div class="info-sub">${icon(LP.BOX_ICONS[b.type])}${esc(b.text)}</div>`;
         log(`${name} şans kutusundan "${t.label}" jokeri çıkardı.`, 'chance');
         const go = $('#boxGo');
+        if (b.type === 'advance') go.innerHTML = `2 Kare İlerle${icon('arrowRight')}`;
         go.classList.remove('hidden');
         go.focus();
         go.onclick = () => { closeModal(); resolve(b); };
@@ -661,7 +700,7 @@
     showInfo({
       icon: 'info',
       title: 'Nasıl Oynanır?',
-      text: '"Kişi Seç" ile sınıftan rastgele biri seçilir. İsim çıkınca kişi sınıftaysa soruya geçilir, sınıfta yoksa yeniden kişi seçilir. Sınıfta olan kişi tırın bulunduğu karenin sorusunu cevaplar. Doğru cevapta tır bir kare ilerler, yanlış cevapta olduğu yerde bekler. Şanslı Soru karelerinde önce bir kutu açılır; içinden yardım alma, iki yanlış şıkkın elenmesi ya da ipucu gibi bir joker çıkar; jokere rağmen yanlış cevapta tır yerinde kalır. Tır "Gümrüğe Takıldın" karesindeyken seçilen kişi gümrükte kalır, tır yoluna devam eder. Ceza karesine gelen tır bir kare geri gider. Varıştan önce gümrükte kalan arkadaşlar, tahta sorularından ayrı olan Koçtaş vaka analizi sınıfça çözülmeden kurtarılamaz ve oyun bitmez!',
+      text: '"Kişi Seç" ile sınıftan rastgele biri seçilir. İsim çıkınca kişi sınıftaysa soruya geçilir, sınıfta yoksa yeniden kişi seçilir. Sınıfta olan kişi tırın bulunduğu karenin sorusunu cevaplar. Doğru cevapta tır bir kare ilerler, yanlış cevapta olduğu yerde bekler. Şanslı Soru karelerinde önce bir kutu açılır; içinden yardım alma, iki yanlış şıkkın elenmesi ya da ipucu gibi bir joker çıkar; jokere rağmen yanlış cevapta tır yerinde kalır. Son şans karesinde kutuların çoğu, soruyu cevaplamadan 2 kare ilerletir. Tır "Gümrüğe Takıldın" karesindeyken seçilen kişi gümrükte kalır, tır yoluna devam eder. Ceza karesine gelen tır bir kare geri gider. Varıştan önce gümrükte kalan arkadaşlar, tahta sorularından ayrı olan Koçtaş vaka analizi sınıfça çözülmeden kurtarılamaz ve oyun bitmez!',
     });
   }
 

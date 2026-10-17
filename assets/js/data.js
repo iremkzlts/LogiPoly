@@ -137,6 +137,14 @@ LP.BOX_TYPES = {
   help: { label: 'Yardım Al', icon: '🤝' },
   fifty: { label: '2 Yanlış Şık Elenir', icon: '✂️' },
   hint: { label: 'İpuçlu Soru', icon: '💡' },
+  advance: { label: '2 Kare İlerle', icon: '🚚' },
+};
+
+// Yalnızca son şans karesinde açılır. İlk şans karelerinin kutusuna konmaz.
+LP.ADVANCE_BOX = {
+  id: 'b-advance',
+  type: 'advance',
+  text: 'Soruyu cevaplamadan 2 kare ilerleme hakkı kazandın, tebrikler!',
 };
 
 LP.DEFAULT_BOXES = [
