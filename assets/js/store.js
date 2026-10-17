@@ -27,6 +27,7 @@ LP.Store = {
       contentVersion: LP.CONTENT_VERSION,
       boxes: LP.DEFAULT_BOXES,
       people: LP.DEFAULT_PEOPLE,
+      peopleVersion: LP.PEOPLE_VERSION,
       settings: LP.DEFAULT_SETTINGS,
     }));
   },
@@ -60,10 +61,11 @@ LP.Store = {
     const boxes = current && Array.isArray(d.boxes)
       ? withIds(d.boxes.filter((b) => b && LP.BOX_TYPES[b.type]), 'b')
       : def.boxes;
-    const people = Array.isArray(d.people) ? this.cleanPeople(d.people) : def.people;
+    const freshPeople = d.peopleVersion !== LP.PEOPLE_VERSION;
+    const people = !freshPeople && Array.isArray(d.people) ? this.cleanPeople(d.people) : def.people;
     const settings = Object.assign({}, def.settings, d.settings || {});
     delete settings.questionTime;
-    return { questions, cases, tiles, tilesVersion: LP.TILES_VERSION, contentVersion: LP.CONTENT_VERSION, boxes, people, settings };
+    return { questions, cases, tiles, tilesVersion: LP.TILES_VERSION, contentVersion: LP.CONTENT_VERSION, boxes, people, peopleVersion: LP.PEOPLE_VERSION, settings };
   },
 
   load() {

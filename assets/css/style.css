@@ -272,9 +272,16 @@ select option { background: #0b2235; }
   text-transform: uppercase; letter-spacing: .4cqw;
 }
 .person-name {
-  font-family: var(--f-display); font-size: 4.2cqw; font-weight: 600; line-height: 1.15; color: #fff;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding-top: .4cqw;
+  font-family: var(--f-display); font-size: 3.4cqw; font-weight: 600; line-height: 1.15; color: #fff;
+  text-align: center; max-width: 100%; padding-top: .4cqw;
 }
+.person-confirm h2 {
+  font-size: 34px; letter-spacing: 0; text-transform: none; line-height: 1.25;
+}
+.person-confirm .person-ask {
+  margin: 8px 0 0; font-size: 18px; font-weight: 600; color: var(--ocean);
+}
+.person-confirm .modal-actions { margin-top: 22px; }
 .person-box.spinning .person-name { color: rgba(255, 255, 255, .55); }
 .person-box.chosen {
   border-color: var(--accent); animation: pop .35s ease;

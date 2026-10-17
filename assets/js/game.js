@@ -140,17 +140,14 @@
     }
 
     busy = true;
-    let pool = remainingPeople();
-    if (!pool.length) {
-      game.drawn = [];
-      pool = remainingPeople();
-      log('Herkes bir kez seçildi, liste yeniden başlıyor.');
+    renderAll();
+    const name = await choosePresentPerson();
+    if (!name) {
+      busy = false;
+      renderAll();
+      return;
     }
 
-    renderCenter();
-    const name = pool[Math.floor(Math.random() * pool.length)];
-    await spinRoulette(pool, name);
-    game.drawn.push(name);
     game.current = name;
     if (!game.answered.includes(name)) game.answered.push(name);
     log(`Seçilen kişi: ${name}`, 'pick');
@@ -272,6 +269,52 @@
         closeModal();
         resolve();
       };
+    });
+  }
+
+  async function choosePresentPerson() {
+    while (true) {
+      let pool = remainingPeople();
+      if (!pool.length) {
+        game.drawn = [];
+        pool = remainingPeople();
+        if (!pool.length) {
+          await showInfo({ icon: 'users', title: 'Seçilecek kimse kalmadı', text: 'Sınıfta seçilebilecek kimse kalmadı. Yeni oyun başlatabilirsiniz.' });
+          return null;
+        }
+        log('Herkes bir kez seçildi, liste yeniden başlıyor.');
+      }
+
+      renderCenter();
+      const name = pool[Math.floor(Math.random() * pool.length)];
+      await spinRoulette(pool, name);
+      if (await confirmPerson(name)) {
+        game.drawn.push(name);
+        return name;
+      }
+
+      game.drawn.push(name);
+      log(`${name} sınıfta yok, yeni kişi seçiliyor.`);
+      save();
+      await sleep(280);
+    }
+  }
+
+  function confirmPerson(name) {
+    return new Promise((resolve) => {
+      openModal(`
+        <div class="info-card person-confirm">
+          <p class="person-ask">Bu kişi sınıfta mı?</p>
+          <h2>${esc(name)}</h2>
+          <div class="modal-actions center">
+            <button class="btn ghost dark-text big" id="personSkip">Tekrar Kişi Seç</button>
+            <button class="btn primary big" id="personHere">Sınıfta, devam et</button>
+          </div>
+        </div>`);
+      const here = $('#personHere');
+      here.focus();
+      here.onclick = () => { closeModal(); resolve(true); };
+      $('#personSkip').onclick = () => { closeModal(); resolve(false); };
     });
   }
 
@@ -618,7 +661,7 @@
     showInfo({
       icon: 'info',
       title: 'Nasıl Oynanır?',
-      text: '"Kişi Seç" ile sınıftan rastgele biri seçilir ve tırın bulunduğu karenin sorusunu cevaplar. Doğru cevapta tır bir kare ilerler, yanlış cevapta olduğu yerde bekler. Şanslı Soru karelerinde önce bir kutu açılır; içinden yardım alma, iki yanlış şıkkın elenmesi ya da ipucu gibi bir joker çıkar; jokere rağmen yanlış cevapta tır yerinde kalır. Tır "Gümrüğe Takıldın" karesindeyken seçilen kişi gümrükte kalır, tır yoluna devam eder. Ceza karesine gelen tır bir kare geri gider. Varıştan önce gümrükte kalan arkadaşlar, tahta sorularından ayrı olan Koçtaş vaka analizi sınıfça çözülmeden kurtarılamaz ve oyun bitmez!',
+      text: '"Kişi Seç" ile sınıftan rastgele biri seçilir. İsim çıkınca kişi sınıftaysa soruya geçilir, sınıfta yoksa yeniden kişi seçilir. Sınıfta olan kişi tırın bulunduğu karenin sorusunu cevaplar. Doğru cevapta tır bir kare ilerler, yanlış cevapta olduğu yerde bekler. Şanslı Soru karelerinde önce bir kutu açılır; içinden yardım alma, iki yanlış şıkkın elenmesi ya da ipucu gibi bir joker çıkar; jokere rağmen yanlış cevapta tır yerinde kalır. Tır "Gümrüğe Takıldın" karesindeyken seçilen kişi gümrükte kalır, tır yoluna devam eder. Ceza karesine gelen tır bir kare geri gider. Varıştan önce gümrükte kalan arkadaşlar, tahta sorularından ayrı olan Koçtaş vaka analizi sınıfça çözülmeden kurtarılamaz ve oyun bitmez!',
     });
   }
 
