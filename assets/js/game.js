@@ -165,7 +165,7 @@
       const skip = joker ? (LP.SKIP_STEPS[joker.type] || 0) : 0;
       if (skip) {
         log(`${name} soruyu cevaplamadan ${skip} kutu atladı.`, 'ok');
-        await advanceSteps(skip);
+        await advanceSteps(skip, { freePass: true });
       } else {
         const correct = await askQuestion(name, tile, joker);
         if (correct) {
@@ -190,8 +190,8 @@
     await advanceSteps(1);
   }
 
-  // Birkaç kare ilerler. Gümrük, ceza, yeni bir şans karesi ya da varışta durur.
-  async function advanceSteps(steps) {
+  // Birkaç kare ilerler. freePass: atlama jokerinde ara özel karelere takılmaz, tam adım sayısını tamamlar.
+  async function advanceSteps(steps, { freePass = false } = {}) {
     for (let i = 0; i < steps; i++) {
       if (game.finished || game.rescueMode) return;
       if (game.pos + 1 >= LAST && game.detained.length) {
@@ -204,10 +204,11 @@
         return;
       }
       const tile = tiles[game.pos];
-      if (tile.type === 'customs' || tile.type === 'chance' || tile.type === 'penalty') {
-        await resolveLanding();
-        return;
-      }
+      const special = tile.type === 'customs' || tile.type === 'chance' || tile.type === 'penalty';
+      if (!special) continue;
+      if (freePass && i < steps - 1) continue;
+      await resolveLanding();
+      return;
     }
   }
 
