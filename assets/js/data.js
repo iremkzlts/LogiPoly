@@ -115,7 +115,7 @@ LP.DEFAULT_QUESTIONS = [
   { id: 'q41', category: 'uretim', text: 'Çamlıca Gıda siparişlerini iki gün önceden vermekte ve ürünleri depoda uzun süre tutmak istememektedir. En uygun yönetimsel öneri hangisidir?', options: ['Talep tahmininden vazgeçip tüm siparişleri acil karşılamak', 'Talep artışlarını önceden tahmin ederek temel ve ek tedariki birlikte planlamak', 'Tüm aylık talebi tek seferde depolamak', 'Her ay yalnızca sabit miktarda tedarik yapıp talep değişimlerini göz ardı etmek'], answer: 1, hint: 'Siparişlerin önceden verilmesi gerekiyorsa ve ürünlerin raf ömrü kısaysa, hangi yaklaşım iki sorunu birlikte yönetebilir?', explanation: 'İki günlük sipariş süresi ve kısa stoklama hedefi, talebin önceden tahmin edilmesini önemli hale getirir. Planlı temel tedarik ile ihtiyaçlara göre ek tedarikin birlikte kullanılması karma stratejiye uygundur.' },
 ];
 
-// Tahta sorularından ayrıdır. Gümrükte kalanları kurtarmak için oyun sonunda sorulan tek vaka.
+// Tahta sorularından ayrıdır. Gümrükte kalanları kurtarmak için oyun sonunda sorulan tek vaka; yanlış cevap = kaybetme.
 LP.DEFAULT_CASES = [
   {
     id: 'koctas',
@@ -140,7 +140,10 @@ LP.BOX_TYPES = {
   retry: { label: '2 Yanlış Hakkı', icon: '🔁' },
   step: { label: '1 Kutu Atla', icon: '➡️' },
   advance: { label: '2 Kutu Atla', icon: '🚚' },
+  leap: { label: '3 Kutu Atla', icon: '🚀' },
 };
+
+LP.SKIP_STEPS = { step: 1, advance: 2, leap: 3 };
 
 // Soldaki ve sondaki şans karelerinde bu üç kutu açılır.
 LP.CLASSIC_BOXES = [
@@ -149,12 +152,11 @@ LP.CLASSIC_BOXES = [
   { id: 'b-help', type: 'help', text: 'Tebrikler, birine danışabilirsin.' },
 ];
 
-// Atlama yalnız sağ üst köşedeki şans karesinde çıkar.
+// Atlama yalnız sağ üst köşedeki şans karesinde çıkar: 1, 2 veya 3 kutu.
 LP.BOOST_BOXES = [
-  { id: 'b-fifty', type: 'fifty', text: 'Tebrikler, iki yanlış şık silindi.' },
-  { id: 'b-retry', type: 'retry', text: 'Tebrikler, iki kez yanlış cevap verebilirsin.' },
   { id: 'b-step', type: 'step', text: 'Tebrikler, soruyu cevaplamana gerek yok. 1 kutu atlama hakkı kazandın.' },
   { id: 'b-advance', type: 'advance', text: 'Tebrikler, soruyu cevaplamana gerek yok. 2 kutu atlama hakkı kazandın.' },
+  { id: 'b-leap', type: 'leap', text: 'Tebrikler, soruyu cevaplamana gerek yok. 3 kutu atlama hakkı kazandın.' },
 ];
 
 LP.DEFAULT_BOXES = [

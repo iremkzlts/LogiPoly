@@ -108,6 +108,7 @@ LP.GameStore = {
       usedPenalties: [],
       rescueMode: false,
       finished: false,
+      lost: false,
       log: [],
     };
   },

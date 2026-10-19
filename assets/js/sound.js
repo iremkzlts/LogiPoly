@@ -369,6 +369,28 @@ LP.Sound = (function () {
     }
   }
 
+  // Kaybetme: inen üzgün akor + hıçkırıklı ağlama / inleme.
+  function defeat() {
+    const c = audio();
+    if (!c) return;
+    const r = reverb(c, 0.45);
+    const out = r.connect(bus(c, 0.85));
+    const soft = filter(c, out, 'lowpass', 1600);
+    [[392, 0], [349, 0.55], [311, 1.1], [262, 1.7]].forEach(([f, t]) => {
+      tone(c, soft, { type: 'triangle', freq: f, start: t, dur: 1.1, vol: 0.16, attack: 0.08, hold: 0.45, vibrato: 3 });
+      tone(c, soft, { type: 'sine', freq: f / 2, start: t, dur: 1.2, vol: 0.08, attack: 0.1, hold: 0.5 });
+    });
+    groan(c, out, { start: 0.35, dur: 1.4, vol: 0.16, from: 280, drop: 0.55, f1: 720, f2: 1400 });
+    groan(c, out, { start: 1.5, dur: 1.6, vol: 0.14, from: 240, drop: 0.5, f1: 650, f2: 1100 });
+    groan(c, out, { start: 2.8, dur: 1.8, vol: 0.12, from: 200, drop: 0.48, f1: 580, f2: 980 });
+    [0.9, 1.35, 2.1, 2.55, 3.3, 3.85].forEach((t, i) => {
+      const sob = filter(c, out, 'bandpass', 900 + (i % 3) * 180, 4);
+      tone(c, sob, { type: 'sawtooth', freq: 320 - i * 18, freqEnd: 180 - i * 10, start: t, dur: 0.35, vol: 0.07, attack: 0.04, hold: 0.3, vibrato: 8 });
+      noise(c, out, { start: t + 0.05, dur: 0.12, vol: 0.06, freq: 1800, q: 1.2, attack: 0.02 });
+    });
+    tone(c, soft, { type: 'sine', freq: 196, freqEnd: 98, start: 3.6, dur: 2.2, vol: 0.1, attack: 0.2, hold: 0.5 });
+  }
+
   return {
     get enabled() { return enabled; },
     toggle() {
@@ -378,6 +400,6 @@ LP.Sound = (function () {
       return enabled;
     },
     JAIL_HIT, tick, picked, question, lucky, chance, boxOpen, correct, wrong, truck, shake,
-    tension, penalty, jail, siren, stopSiren: stopSirenNow, victory,
+    tension, penalty, jail, siren, stopSiren: stopSirenNow, victory, defeat,
   };
 })();

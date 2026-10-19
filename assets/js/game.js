@@ -120,8 +120,10 @@
 
   function onMainAction() {
     if (busy) return;
-    if (game.finished) showVictory();
-    else if (game.rescueMode) rescue();
+    if (game.finished) {
+      if (game.lost) showDefeat();
+      else showVictory();
+    } else if (game.rescueMode) rescue();
     else pickPerson();
   }
 
@@ -160,7 +162,7 @@
       await detainAtCustoms(name);
     } else {
       const joker = tile.type === 'chance' ? await openBoxes(name) : null;
-      const skip = joker && (joker.type === 'step' || joker.type === 'advance') ? (joker.type === 'advance' ? 2 : 1) : 0;
+      const skip = joker ? (LP.SKIP_STEPS[joker.type] || 0) : 0;
       if (skip) {
         log(`${name} soruyu cevaplamadan ${skip} kutu atladı.`, 'ok');
         await advanceSteps(skip);
@@ -368,7 +370,7 @@
 
   async function startRescue() {
     game.rescueMode = true;
-    log('Gümrükte unutulan arkadaş var! Kurtarma sorusu çözülmeden oyun bitmez.', 'bad');
+    log('Gümrükte unutulan arkadaş var! Koçtaş vaka analizi yanlış cevaplanırsa oyun kaybedilir.', 'bad');
     save();
     renderAll();
     document.body.classList.add('alarm');
@@ -377,7 +379,7 @@
       icon: 'siren',
       tone: 'alarm',
       title: 'Gümrükte unuttuğunuz biri var!',
-      text: `${detainedNames().join(', ')} hâlâ gümrükte. Koçtaş vaka analizi çözülmeden oyun bitmez. "Kurtarma Operasyonu" ile soruyu sınıfça çözün.`,
+      text: `${detainedNames().join(', ')} hâlâ gümrükte. Koçtaş vaka analizi sınıfça çözülmeli; yanlış cevaplanınca oyun kaybedilir. "Kurtarma Operasyonu" ile soruyu açın.`,
     });
     LP.Sound.stopSiren();
     document.body.classList.remove('alarm');
@@ -398,7 +400,8 @@
       while (game.pos < LAST) await moveForward();
       finishGame();
     } else {
-      log('Koçtaş vaka analizi yanlış cevaplandı. Kurtarma sorusu tekrar sorulacak.', 'bad');
+      log('Koçtaş vaka analizi yanlış cevaplandı. Gümrüktekiler kurtarılamadı — kaybettiniz.', 'bad');
+      loseGame(names);
     }
     save();
     busy = false;
@@ -407,10 +410,20 @@
 
   function finishGame() {
     game.finished = true;
+    game.lost = false;
     log('Tebrikler, kazandınız! Tüm yükler teslim edildi.', 'ok');
     save();
     renderAll();
     showVictory();
+  }
+
+  function loseGame(names) {
+    game.finished = true;
+    game.lost = true;
+    game.rescueMode = false;
+    save();
+    renderAll();
+    showDefeat(names);
   }
 
   // ---------------- Sorular ----------------
@@ -603,7 +616,7 @@
           <span class="q-head-icon">${icon('siren')}</span>
           <div>
             <div class="q-cat">Vaka Analizi${c.title ? ` · ${esc(c.title)}` : ''}</div>
-            <div class="q-tile">${esc(who)} gümrükte. Bu soru tahta sorularından ayrıdır; sınıfça çözülmeden oyun bitmez.</div>
+            <div class="q-tile">${esc(who)} gümrükte. Bu soru tahta sorularından ayrıdır; yanlış cevaplanınca oyun kaybedilir.</div>
           </div>
         </div>
         <div class="q-body" style="--cat:#b3123a">
@@ -643,9 +656,11 @@
           if (correct && opts[j].ok) x.classList.add('correct');
           if (j === i && !correct) x.classList.add('wrong');
         });
+        if (correct) LP.Sound.correct();
+        else LP.Sound.wrong();
         $('#qResult').innerHTML = correct
           ? `<div class="q-result ok"><div class="qr-line">${icon('check')}Doğru! ${esc(who)} gümrükten kurtuldu.</div>${c.explanation ? `<div class="q-exp">${esc(c.explanation)}</div>` : ''}</div>`
-          : `<div class="q-result bad"><div class="qr-line">${icon('x')}Yanlış! ${esc(who)} hâlâ gümrükte. Vaka analizini tekrar çözün.</div></div>`;
+          : `<div class="q-result bad"><div class="qr-line">${icon('x')}Yanlış! ${esc(who)} kurtarılamadı. Kaybettiniz.</div>${c.explanation ? `<div class="q-exp">${esc(c.explanation)}</div>` : ''}</div>`;
         const cont = $('#qContinue');
         cont.classList.remove('hidden');
         cont.focus();
@@ -684,6 +699,38 @@
     $('#btnRestart').onclick = () => { closeModal(); newGame(true); };
   }
 
+  function showDefeat(names) {
+    const list = Array.isArray(names) && names.length ? names : detainedNames();
+    const who = list.length ? list.join(', ') : 'Gümrüktekiler';
+    openModal(`
+      <div class="defeat">
+        <div class="defeat-hero">
+          <img src="assets/img/customs-truck.jpg" alt="Gümrükte kalan tır">
+          <span class="jail-tear" style="left:62%;top:49.5%;animation-delay:.4s"></span>
+          <span class="jail-tear" style="left:60.5%;top:50%;animation-delay:1.2s"></span>
+          <span class="jail-tear" style="left:29.5%;top:47.5%;animation-delay:.8s"></span>
+          <span class="jail-tear" style="left:31%;top:48%;animation-delay:1.8s"></span>
+          <div class="defeat-veil"></div>
+        </div>
+        <div class="defeat-kicker">${icon('shieldAlert')}Kurtarma başarısız</div>
+        <h2>Kaybettiniz!</h2>
+        <p>Koçtaş vaka analizi çözülemedi. <b>${esc(who)}</b> gümrükte kaldı; teslimat tamamlanamadı.</p>
+        <div class="victory-stats defeat-stats">
+          <div><b>${game.stats.correct}</b><span>Doğru</span></div>
+          <div><b>${game.stats.wrong}</b><span>Yanlış</span></div>
+          <div><b>${game.answered.length}</b><span>Katılan</span></div>
+          <div><b>${list.length}</b><span>Mahsur</span></div>
+        </div>
+        <div class="modal-actions center">
+          <button class="btn ghost dark-text" id="btnCloseDefeat">Kapat</button>
+          <button class="btn primary" id="btnRestartDefeat">${icon('rotate')}Yeni Oyun</button>
+        </div>
+      </div>`);
+    LP.Sound.defeat();
+    $('#btnCloseDefeat').onclick = closeModal;
+    $('#btnRestartDefeat').onclick = () => { closeModal(); newGame(true); };
+  }
+
   function newGame(skipConfirm) {
     if (busy) return;
     const started = game.pos > 0 || game.drawn.length || game.detained.length;
@@ -700,7 +747,7 @@
     showInfo({
       icon: 'info',
       title: 'Nasıl Oynanır?',
-      text: '"Kişi Seç" ile sınıftan rastgele biri seçilir. İsim çıkınca kişi sınıftaysa soruya geçilir, sınıfta yoksa yeniden kişi seçilir. Sınıfta olan kişi tırın bulunduğu karenin sorusunu cevaplar. Doğru cevapta tır bir kare ilerler, yanlış cevapta olduğu yerde bekler. Şanslı Soru karelerinde önce bir kutu açılır. Çoğunda iki yanlış şık silinir, iki kez yanlış cevap hakkı ya da birine danışma çıkar. Atlama yalnız sağ üst köşededir; orada 1 ya da 2 kutu atlanır ve soru sorulmaz. Tır "Gümrüğe Takıldın" karesindeyken seçilen kişi gümrükte kalır, tır yoluna devam eder. Ceza karesine gelen tır bir kare geri gider. Varıştan önce gümrükte kalan arkadaşlar, tahta sorularından ayrı olan Koçtaş vaka analizi sınıfça çözülmeden kurtarılamaz ve oyun bitmez!',
+      text: '"Kişi Seç" ile sınıftan rastgele biri seçilir. İsim çıkınca kişi sınıftaysa soruya geçilir, sınıfta yoksa yeniden kişi seçilir. Sınıfta olan kişi tırın bulunduğu karenin sorusunu cevaplar. Doğru cevapta tır bir kare ilerler, yanlış cevapta olduğu yerde bekler. Şanslı Soru karelerinde önce bir kutu açılır. Çoğunda iki yanlış şık silinir, iki kez yanlış cevap hakkı ya da birine danışma çıkar. Atlama yalnız sağ üst köşededir; orada 1, 2 veya 3 kutu atlanır ve soru sorulmaz. Tır "Gümrüğe Takıldın" karesindeyken seçilen kişi gümrükte kalır, tır yoluna devam eder. Ceza karesine gelen tır bir kare geri gider. Varıştan önce gümrükte kalan arkadaşlar için Koçtaş vaka analizi sorulur; doğru cevaplanmazsa oyun kaybedilir!',
     });
   }
 
@@ -733,10 +780,10 @@
     $('#board').classList.toggle('rescue', atFinish);
     const btn = $('#btnMain');
     btn.disabled = busy;
-    if (game.finished) btn.innerHTML = `${icon('trophy')}Kazandınız`;
+    if (game.finished) btn.innerHTML = game.lost ? `${icon('shieldAlert')}Kaybettiniz` : `${icon('trophy')}Kazandınız`;
     else if (atFinish) btn.innerHTML = `${icon('siren')}Kurtarma Operasyonu · ${game.detained.length}`;
     else btn.innerHTML = `${icon('users')}Kişi Seç`;
-    btn.classList.toggle('danger-glow', atFinish);
+    btn.classList.toggle('danger-glow', atFinish || (game.finished && game.lost));
 
     if (atFinish && game.detained.length) {
       $('#personLabel').textContent = 'Kurtarılacak kişi';
@@ -818,7 +865,7 @@
   const TEST_SOUNDS = {
     picked: 'Kişi seçildi', question: 'Soru açıldı', chance: 'Şans karesine varış', lucky: 'Şanslı soru', boxOpen: 'Kutu açıldı',
     correct: 'Doğru cevap', wrong: 'Yanlış cevap', truck: 'Tır ilerliyor', shake: 'Tır titriyor',
-    tension: 'Ceza gerilimi', penalty: 'Ceza (offf)', jail: 'Nezarethane', siren: 'Siren', victory: 'Kazanma',
+    tension: 'Ceza gerilimi', penalty: 'Ceza (offf)', jail: 'Nezarethane', siren: 'Siren', victory: 'Kazanma', defeat: 'Kaybetme (ağlama)',
   };
 
   async function testJump(i) {
@@ -878,6 +925,7 @@
           <button class="btn sm" id="tpDetain">Gümrüğe kişi ekle</button>
           <button class="btn sm" id="tpAlarm">Bitiş alarmı</button>
           <button class="btn sm" id="tpVictory">Kazanma ekranı</button>
+          <button class="btn sm" id="tpDefeat">Kaybetme ekranı</button>
           <button class="btn sm" id="tpReset">Testi sıfırla</button>
         </div>
         <label class="tp-row">Ses dene
@@ -901,6 +949,11 @@
       testJump(LAST);
     };
     $('#tpVictory').onclick = () => { if (!busy) showVictory(); };
+    $('#tpDefeat').onclick = () => {
+      if (busy) return;
+      if (!game.detained.length) testAddDetained();
+      loseGame(detainedNames());
+    };
     $('#tpReset').onclick = () => newGame(true);
     $('#tpPlay').onclick = () => {
       const name = $('#tpSound').value;
