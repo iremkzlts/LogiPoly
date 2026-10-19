@@ -164,8 +164,9 @@
       const joker = tile.type === 'chance' ? await openBoxes(name) : null;
       const skip = joker ? (LP.SKIP_STEPS[joker.type] || 0) : 0;
       if (skip) {
+        // Şans karesinden çık (+1) ve N kutuyu atla → N=1: Plan Tablosu, N=2: Maliyet, N=3: Dönem Planı.
         log(`${name} soruyu cevaplamadan ${skip} kutu atladı.`, 'ok');
-        await advanceSteps(skip, { freePass: true });
+        await advanceSteps(skip + 1, { freePass: true });
       } else {
         const correct = await askQuestion(name, tile, joker);
         if (correct) {
